@@ -15,11 +15,6 @@
 #include <vector>
 #include <Windows.h>
 
-#pragma comment(lib, "pdh.lib")
-
-static PDH_HQUERY cpuQuery;
-static PDH_HCOUNTER cpuTotal;
-
 GUI::GUI() noexcept
 {
     ImGui::CreateContext();
@@ -29,37 +24,20 @@ GUI::GUI() noexcept
     ImGuiStyle& style = ImGui::GetStyle();
 
     style.ScrollbarSize = 13.0f;
+    style.WindowTitleAlign = { 0.5f, 0.5f };
 
     ImGuiIO& io = ImGui::GetIO();
     io.IniFilename = nullptr;
     io.LogFilename = nullptr;
     io.ConfigFlags |= ImGuiConfigFlags_NoMouseCursorChange;
-
-    PdhOpenQueryW(nullptr, NULL, &cpuQuery);
-    PdhAddEnglishCounterW(cpuQuery, L"\\Processor(_Total)\\% Processor Time", NULL, &cpuTotal);
-    PdhCollectQueryData(cpuQuery);
 }
 
 void GUI::render() noexcept
 {
-    const auto time = std::time(nullptr);
-    const auto localTime = std::localtime(&time);
+    if (!open)
+        return;
 
-    static auto lastSecond = 0;
-    static PDH_FMT_COUNTERVALUE cpuUsage;
-
-    if (lastSecond != localTime->tm_sec) {
-        lastSecond = localTime->tm_sec;
-
-        PdhCollectQueryData(cpuQuery);
-        PdhGetFormattedCounterValue(cpuTotal, PDH_FMT_LONG, nullptr, &cpuUsage);
-    }
-
-    const auto windowTitle = std::ostringstream{ } << "GOESP [" << std::setw(2) << std::setfill('0') << localTime->tm_hour << ':' << std::setw(2) << std::setfill('0') << localTime->tm_min << ':' << std::setw(2) << std::setfill('0') << localTime->tm_sec << ']' << std::string(52, ' ') << "CPU: " << cpuUsage.longValue << "%###window";
-
-    ImGui::SetNextWindowCollapsed(true, ImGui::GetIO().KeysDown[VK_SUBTRACT] ? ImGuiCond_Always : ImGuiCond_FirstUseEver);
-
-    blockInput = ImGui::Begin(windowTitle.str().c_str(), nullptr, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
+    ImGui::Begin("GOESP", nullptr, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse | ImGuiWindowFlags_NoCollapse);
 
     if (ImGui::BeginTabBar("##tabbar", ImGuiTabBarFlags_Reorderable)) {
         ImGui::SameLine(ImGui::GetWindowContentRegionMax().x - 350.0f);
@@ -67,10 +45,8 @@ void GUI::render() noexcept
         ImGui::TextUnformatted("Build date: " __DATE__ " " __TIME__);
         ImGui::SameLine(ImGui::GetWindowContentRegionMax().x - 55.0f);
 
-        if (ImGui::Button("Unload")) {
-            PdhCloseQuery(cpuQuery);
-            hooks.restore();
-        }
+        if (ImGui::Button("Unload"))
+            hooks->restore();
 
         if (ImGui::BeginTabItem("ESP")) {
             static int currentCategory = 0;
@@ -80,35 +56,35 @@ void GUI::render() noexcept
             constexpr auto getConfig = [](int category, int item, int subItem = 0) constexpr noexcept -> Config::Shared& {
                 switch (category) {
                 case 0:
-                    return config.players[item];
+                    return config->players[item];
                 case 1:
-                    return config.players[item + 3];
+                    return config->players[item + 3];
                 case 2:
                     switch (item) {
                     default:
                     case 0:
-                        return config.weapons;
+                        return config->weapons;
                     case 1:
-                        return config.pistols[subItem];
+                        return config->pistols[subItem];
                     case 2:
-                        return config.smgs[subItem];
+                        return config->smgs[subItem];
                     case 3:
-                        return config.rifles[subItem];
+                        return config->rifles[subItem];
                     case 4:
-                        return config.sniperRifles[subItem];
+                        return config->sniperRifles[subItem];
                     case 5:
-                        return config.shotguns[subItem];
+                        return config->shotguns[subItem];
                     case 6:
-                        return config.machineguns[subItem];
+                        return config->machineguns[subItem];
                     case 7:
-                        return config.grenades[subItem];
+                        return config->grenades[subItem];
                     }
                 case 3:
-                    return config.projectiles[item];
+                    return config->projectiles[item];
                 case 4:
-                    return config.otherEntities[item];
+                    return config->otherEntities[item];
                 default:
-                    return config.players[0];
+                    return config->players[0];
                 }
             };
 
@@ -206,13 +182,13 @@ void GUI::render() noexcept
                 ImGui::Checkbox("Enabled", &sharedConfig.enabled);
                 ImGui::SameLine(ImGui::GetWindowContentRegionMax().x - 260.0f);
                 ImGui::SetNextItemWidth(220.0f);
-                if (ImGui::BeginCombo("Font", config.systemFonts[sharedConfig.fontIndex].first.c_str())) {
-                    for (size_t i = 0; i < config.systemFonts.size(); i++) {
-                        bool isSelected = config.systemFonts[i].second == sharedConfig.font;
-                        if (ImGui::Selectable(config.systemFonts[i].first.c_str(), isSelected, 0, { 300.0f, 0.0f })) {
+                if (ImGui::BeginCombo("Font", config->systemFonts[sharedConfig.fontIndex].first.c_str())) {
+                    for (size_t i = 0; i < config->systemFonts.size(); i++) {
+                        bool isSelected = config->systemFonts[i].second == sharedConfig.font;
+                        if (ImGui::Selectable(config->systemFonts[i].first.c_str(), isSelected, 0, { 300.0f, 0.0f })) {
                             sharedConfig.fontIndex = i;
-                            sharedConfig.font = config.systemFonts[i].second;
-                            config.scheduleFontLoad(sharedConfig.font);
+                            sharedConfig.font = config->systemFonts[i].second;
+                            config->scheduleFontLoad(sharedConfig.font);
                         }
                         if (isSelected)
                             ImGui::SetItemDefaultFocus();
@@ -224,17 +200,20 @@ void GUI::render() noexcept
 
                 constexpr auto spacing = 200.0f;
                 ImGuiCustom::colorPicker("Snaplines", sharedConfig.snaplines);
+                ImGui::SameLine();
+                ImGui::SetNextItemWidth(75.0f);
+                ImGui::Combo("##1", &sharedConfig.snaplineType, "Bottom\0Top\0");
                 ImGui::SameLine(spacing);
                 ImGuiCustom::colorPicker("Box", sharedConfig.box);
                 ImGui::SameLine();
                 ImGui::SetNextItemWidth(95.0f);
-                ImGui::Combo("", &sharedConfig.boxType, "2D\0" "2D corners\0" "3D\0" "3D corners\0");
+                ImGui::Combo("##2", &sharedConfig.boxType, "2D\0" "2D corners\0" "3D\0" "3D corners\0");
                 ImGuiCustom::colorPicker("Name", sharedConfig.name);
                 ImGui::SameLine(spacing);
                 ImGuiCustom::colorPicker("Text Background", sharedConfig.textBackground);
 
                 if (currentCategory < 2) {
-                    auto& playerConfig = config.players[currentCategory * 3 + currentItem];
+                    auto& playerConfig = config->players[currentCategory * 3 + currentItem];
 
                     ImGuiCustom::colorPicker("Weapon", playerConfig.weapon);
                 } else if (currentCategory == 2) {
@@ -242,21 +221,21 @@ void GUI::render() noexcept
                         switch (item) {
                         default:
                         case 0:
-                            return config.weapons;
+                            return config->weapons;
                         case 1:
-                            return config.pistols[subItem];
+                            return config->pistols[subItem];
                         case 2:
-                            return config.smgs[subItem];
+                            return config->smgs[subItem];
                         case 3:
-                            return config.rifles[subItem];
+                            return config->rifles[subItem];
                         case 4:
-                            return config.sniperRifles[subItem];
+                            return config->sniperRifles[subItem];
                         case 5:
-                            return config.shotguns[subItem];
+                            return config->shotguns[subItem];
                         case 6:
-                            return config.machineguns[subItem];
+                            return config->machineguns[subItem];
                         case 7:
-                            return config.grenades[subItem];
+                            return config->grenades[subItem];
                         }
                     };
                     auto& weaponConfig = getWeaponConfig(currentItem, currentSubItem);
@@ -271,20 +250,19 @@ void GUI::render() noexcept
             ImGui::EndTabItem();
         }
         if (ImGui::BeginTabItem("Misc")) {
-            ImGuiCustom::colorPicker("Reload Progress", config.reloadProgress);
-            ImGuiCustom::colorPicker("Recoil Crosshair", config.recoilCrosshair);
+            ImGuiCustom::colorPicker("Reload Progress", config->reloadProgress);
+            ImGuiCustom::colorPicker("Recoil Crosshair", config->recoilCrosshair);
             ImGui::EndTabItem();
         }
         if (ImGui::BeginTabItem("Configs")) {
             ImGui::TextUnformatted("Config is saved as \"config.txt\" inside GOESP directory in Documents");
             if (ImGui::Button("Load"))
-                config.load();
+                config->load();
             if (ImGui::Button("Save"))
-                config.save();
+                config->save();
             ImGui::EndTabItem();
         }
         ImGui::EndTabBar();
     }
-
     ImGui::End();
 }

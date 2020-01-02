@@ -2,6 +2,7 @@
 
 #include <array>
 #include <filesystem>
+#include <memory>
 #include <string>
 #include <tuple>
 #include <unordered_map>
@@ -44,6 +45,7 @@ public:
         std::string font;
         int fontIndex = 0; // runtime only, don't save
         ColorToggleThickness snaplines;
+        int snaplineType = 0;
         ColorToggleThicknessRounding box;
         int boxType = 0;
         ColorToggle name;
@@ -85,4 +87,4 @@ private:
     std::filesystem::path path;
 };
 
-extern Config config;
+inline std::unique_ptr<Config> config;

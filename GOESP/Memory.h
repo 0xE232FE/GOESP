@@ -2,9 +2,11 @@
 
 #include <cstdint>
 #include <d3d9.h>
+#include <memory>
 #include <Windows.h>
 #include <Psapi.h>
 #include <sstream>
+#include <type_traits>
 
 class Entity;
 struct GlobalVars;
@@ -15,9 +17,11 @@ public:
 
     uintptr_t present;
     uintptr_t reset;
+    uintptr_t setCursorPos;
+
     bool(__thiscall* isOtherEnemy)(Entity*, Entity*);
-    const D3DMATRIX* viewMatrix;
     const GlobalVars* globalVars;
+    std::add_pointer_t<void __cdecl(const char* msg, ...)> debugMsg;
 private:
     template <typename T = uintptr_t>
     static auto findPattern(const wchar_t* module, const char* pattern, size_t offset = 0) noexcept
@@ -47,4 +51,4 @@ private:
     }
 };
 
-extern Memory memory;
+inline std::unique_ptr<Memory> memory;

@@ -59,9 +59,6 @@
     <ClCompile Include="ImGuiCustom.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Netvars.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="Hacks\ESP.cpp">
       <Filter>Hacks</Filter>
     </ClCompile>
@@ -130,12 +127,6 @@
     <ClInclude Include="SDK\Vector.h">
       <Filter>SDK</Filter>
     </ClInclude>
-    <ClInclude Include="Netvars.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="SDK\Recv.h">
-      <Filter>SDK</Filter>
-    </ClInclude>
     <ClInclude Include="fnv.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -166,9 +157,6 @@
     <ClInclude Include="SDK\Localize.h">
       <Filter>SDK</Filter>
     </ClInclude>
-    <ClInclude Include="SDK\WeaponData.h">
-      <Filter>SDK</Filter>
-    </ClInclude>
     <ClInclude Include="Hacks\Misc.h">
       <Filter>Hacks</Filter>
     </ClInclude>
@@ -182,6 +170,9 @@
       <Filter>SDK</Filter>
     </ClInclude>
     <ClInclude Include="SDK\Cvar.h">
+      <Filter>SDK</Filter>
+    </ClInclude>
+    <ClInclude Include="SDK\WeaponInfo.h">
       <Filter>SDK</Filter>
     </ClInclude>
   </ItemGroup>

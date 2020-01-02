@@ -1,11 +1,13 @@
 #pragma once
 
+#include <memory>
+
 class GUI {
 public:
     GUI() noexcept;
     void render() noexcept;
 
-    bool blockInput = false;
+    bool open = true;
 };
 
-extern GUI gui;
+inline std::unique_ptr<GUI> gui;

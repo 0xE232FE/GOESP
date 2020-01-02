@@ -98,6 +98,7 @@
       <InlineFunctionExpansion>AnySuitable</InlineFunctionExpansion>
       <BufferSecurityCheck>false</BufferSecurityCheck>
       <RuntimeTypeInfo>false</RuntimeTypeInfo>
+      <FloatingPointModel>Fast</FloatingPointModel>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -127,7 +128,6 @@
     <ClCompile Include="imgui\imgui_impl_win32.cpp" />
     <ClCompile Include="imgui\imgui_widgets.cpp" />
     <ClCompile Include="Memory.cpp" />
-    <ClCompile Include="Netvars.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Config.h" />
@@ -148,7 +148,6 @@
     <ClInclude Include="imgui\imstb_truetype.h" />
     <ClInclude Include="Interfaces.h" />
     <ClInclude Include="Memory.h" />
-    <ClInclude Include="Netvars.h" />
     <ClInclude Include="nlohmann\json.hpp" />
     <ClInclude Include="SDK\ClassId.h" />
     <ClInclude Include="SDK\Client.h" />
@@ -163,10 +162,9 @@
     <ClInclude Include="SDK\InputSystem.h" />
     <ClInclude Include="SDK\Localize.h" />
     <ClInclude Include="SDK\Matrix3x4.h" />
-    <ClInclude Include="SDK\Recv.h" />
     <ClInclude Include="SDK\Utils.h" />
     <ClInclude Include="SDK\Vector.h" />
-    <ClInclude Include="SDK\WeaponData.h" />
+    <ClInclude Include="SDK\WeaponInfo.h" />
     <ClInclude Include="SDK\WeaponId.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
