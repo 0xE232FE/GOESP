@@ -108,6 +108,8 @@ static void from_json(const json& j, Config::Shared& s)
     read<value_t::object>(j, "Box", s.box);
     read<value_t::number_integer>(j, "Box Type", s.boxType);
     read<value_t::object>(j, "Name", s.name);
+    read<value_t::object>(j, "Text Background", s.textBackground);
+    read<value_t::number_float>(j, "Text Cull Distance", s.textCullDistance);
 }
 
 static void from_json(const json& j, Config::Weapon& w)
@@ -149,6 +151,7 @@ void Config::load() noexcept
 
     read<value_t::object>(j, "Reload Progress", reloadProgress);
     read<value_t::object>(j, "Recoil Crosshair", recoilCrosshair);
+    read<value_t::boolean>(j, "Normalize Player Names", normalizePlayerNames);
 }
 
 static void to_json(json& j, const Config::Color& c)
@@ -191,7 +194,9 @@ static void to_json(json& j, const Config::Shared& s)
               { "Snapline Type", s.snaplineType },
               { "Box", s.box },
               { "Box Type", s.boxType },
-              { "Name", s.name }
+              { "Name", s.name }, 
+              { "Text Background", s.textBackground },
+              { "Text Cull Distance", s.textCullDistance }
     };
 }
 
@@ -226,6 +231,7 @@ void Config::save() noexcept
 
     j["Reload Progress"] = reloadProgress;
     j["Recoil Crosshair"] = recoilCrosshair;
+    j["Normalize Player Names"] = normalizePlayerNames;
 
     if (std::ofstream out{ path / "config.txt" }; out.good())
         out << std::setw(4) << j;

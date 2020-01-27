@@ -3,7 +3,7 @@
 #include "imgui/imgui.h"
 #include "imgui/imgui_internal.h"
 
-void ImGuiCustom::colorPicker(const char* name, std::array<float, 4>& color, bool* enable, bool* rainbow, float* rainbowSpeed, float* rounding, float* thickness) noexcept
+void ImGuiCustom::colorPopup(const char* name, std::array<float, 4>& color, bool* enable, std::function<void()> popupFn) noexcept
 {
     ImGui::PushID(name);
     if (enable) {
@@ -19,51 +19,57 @@ void ImGuiCustom::colorPicker(const char* name, std::array<float, 4>& color, boo
 
     if (ImGui::BeginPopup("##popup")) {
         ImGui::ColorPicker4("##picker", color.data(), ImGuiColorEditFlags_DisplayRGB | ImGuiColorEditFlags_NoSidePreview | ImGuiColorEditFlags_AlphaPreview);
-
-        if (rainbow && rainbowSpeed) {
-            ImGui::SameLine();
-
-            if (ImGui::BeginChild("##child", { 150.0f, 0.0f })) {
-                ImGui::Checkbox("Rainbow", rainbow);
-                ImGui::PushItemWidth(85.0f);
-                ImGui::InputFloat("Speed", rainbowSpeed, 0.01f, 0.15f, "%.2f");
-
-                if (rounding || thickness)
-                    ImGui::Separator();
-
-                if (rounding) {
-                    ImGui::InputFloat("Rounding", rounding, 0.1f, 0.0f, "%.1f");
-                    *rounding = std::max(*rounding, 0.0f);
-                }
-                if (thickness) {
-                    ImGui::InputFloat("Thickness", thickness, 0.1f, 0.0f, "%.1f");
-                    *thickness = std::max(*thickness, 0.0f);
-                }
-                ImGui::PopItemWidth();
-                ImGui::EndChild();
-            }
-        }
+        if (popupFn)
+            popupFn();
         ImGui::EndPopup();
     }
     ImGui::PopID();
 }
 
-void ImGuiCustom::colorPicker(const char* name, Config::ColorToggle& colorConfig) noexcept
+void ImGuiCustom::colorPicker(const char* name, Config::ColorToggle& colorConfig, std::function<void()> pickerFn) noexcept
 {
-    colorPicker(name, colorConfig.color, &colorConfig.enabled, &colorConfig.rainbow, &colorConfig.rainbowSpeed);
+    colorPopup(name, colorConfig.color, &colorConfig.enabled, [&] {
+        ImGui::SameLine();
+        if (ImGui::BeginChild("##child", { 150.0f, 0.0f })) {
+            ImGui::Checkbox("Rainbow", &colorConfig.rainbow);
+            ImGui::PushItemWidth(85.0f);
+            ImGui::InputFloat("Speed", &colorConfig.rainbowSpeed, 0.01f, 0.15f, "%.2f");
+            if (pickerFn)
+                pickerFn();
+            ImGui::PopItemWidth();
+            ImGui::EndChild();
+        }
+    });
 }
 
-void ImGuiCustom::colorPicker(const char* name, Config::ColorToggleRounding& colorConfig) noexcept
+void ImGuiCustom::colorPicker(const char* name, Config::ColorToggleRounding& colorConfig, std::function<void()> pickerFn) noexcept
 {
-    colorPicker(name, colorConfig.color, &colorConfig.enabled, &colorConfig.rainbow, &colorConfig.rainbowSpeed, &colorConfig.rounding);
+    colorPicker(name, static_cast<Config::ColorToggle&>(colorConfig), [&] {
+        ImGui::Separator();
+        ImGui::InputFloat("Rounding", &colorConfig.rounding, 0.1f, 0.0f, "%.1f");
+        colorConfig.rounding = std::max(colorConfig.rounding, 0.0f);
+        if (pickerFn)
+            pickerFn();
+    });
 }
 
-void ImGuiCustom::colorPicker(const char* name, Config::ColorToggleThickness& colorConfig) noexcept
+void ImGuiCustom::colorPicker(const char* name, Config::ColorToggleThickness& colorConfig, std::function<void()> pickerFn) noexcept
 {
-    colorPicker(name, colorConfig.color, &colorConfig.enabled, &colorConfig.rainbow, &colorConfig.rainbowSpeed, nullptr, &colorConfig.thickness);
+    colorPicker(name, static_cast<Config::ColorToggle&>(colorConfig), [&] {
+        ImGui::Separator();
+        ImGui::InputFloat("Thickness", &colorConfig.thickness, 0.1f, 0.0f, "%.1f");
+        colorConfig.thickness = std::max(colorConfig.thickness, 0.0f);
+        if (pickerFn)
+            pickerFn();
+    });
 }
 
-void ImGuiCustom::colorPicker(const char* name, Config::ColorToggleThicknessRounding& colorConfig) noexcept
+void ImGuiCustom::colorPicker(const char* name, Config::ColorToggleThicknessRounding& colorConfig, std::function<void()> pickerFn) noexcept
 {
-    colorPicker(name, colorConfig.color, &colorConfig.enabled, &colorConfig.rainbow, &colorConfig.rainbowSpeed, &colorConfig.rounding, &colorConfig.thickness);
+    colorPicker(name, static_cast<Config::ColorToggleRounding&>(colorConfig), [&] {
+        ImGui::InputFloat("Thickness", &colorConfig.thickness, 0.1f, 0.0f, "%.1f");
+        colorConfig.thickness = std::max(colorConfig.thickness, 0.0f);
+        if (pickerFn)
+            pickerFn();
+    });
 }

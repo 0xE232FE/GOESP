@@ -211,6 +211,9 @@ void GUI::render() noexcept
                 ImGuiCustom::colorPicker("Name", sharedConfig.name);
                 ImGui::SameLine(spacing);
                 ImGuiCustom::colorPicker("Text Background", sharedConfig.textBackground);
+                ImGui::SetNextItemWidth(95.0f);
+                ImGui::InputFloat("Text Cull Distance", &sharedConfig.textCullDistance, 0.4f, 0.8f, "%.1fm");
+                sharedConfig.textCullDistance = std::clamp(sharedConfig.textCullDistance, 0.0f, 999.9f);
 
                 if (currentCategory < 2) {
                     auto& playerConfig = config->players[currentCategory * 3 + currentItem];
@@ -252,6 +255,7 @@ void GUI::render() noexcept
         if (ImGui::BeginTabItem("Misc")) {
             ImGuiCustom::colorPicker("Reload Progress", config->reloadProgress);
             ImGuiCustom::colorPicker("Recoil Crosshair", config->recoilCrosshair);
+            ImGui::Checkbox("Normalize Player Names", &config->normalizePlayerNames);
             ImGui::EndTabItem();
         }
         if (ImGui::BeginTabItem("Configs")) {

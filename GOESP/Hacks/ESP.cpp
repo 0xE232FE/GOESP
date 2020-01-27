@@ -110,9 +110,18 @@ void ESP::collectData() noexcept
             data.enemy = memory->isOtherEnemy(entity, localPlayer);
             data.visible = entity->visibleTo(localPlayer);
 
-            if (PlayerInfo playerInfo; interfaces->engine->getPlayerInfo(entity->index(), playerInfo))
-                data.name = playerInfo.name;
-
+            if (PlayerInfo playerInfo; interfaces->engine->getPlayerInfo(entity->index(), playerInfo)) {
+                if (config->normalizePlayerNames) {
+                    if (wchar_t nameWide[128]; MultiByteToWideChar(CP_UTF8, 0, playerInfo.name, 128, nameWide, 128)) {
+                        if (wchar_t nameNormalized[128]; NormalizeString(NormalizationKC, nameWide, -1, nameNormalized, 128)) {
+                            if (WideCharToMultiByte(CP_UTF8, 0, nameNormalized, -1, playerInfo.name, 128, nullptr, nullptr))
+                                data.name = playerInfo.name;
+                        }
+                    }
+                } else {
+                    data.name = playerInfo.name;
+                }
+            }
             if (const auto weapon = entity->getActiveWeapon()) {
                 if (const auto weaponData = weapon->getWeaponInfo()) {
                     if (char weaponName[100]; WideCharToMultiByte(CP_UTF8, 0, interfaces->localize->find(weaponData->name), -1, weaponName, _countof(weaponName), nullptr, nullptr))
@@ -261,12 +270,14 @@ static void renderBox(ImDrawList* drawList, const BoundingBox& bbox, const Confi
     }
 }
 
-static void renderText(ImDrawList* drawList, float distance, const Config::Color& textCfg, const Config::ColorToggleRounding& backgroundCfg, const char* text, const ImVec2& pos, bool centered = true, bool adjustHeight = true) noexcept
+static void renderText(ImDrawList* drawList, float distance, float cullDistance, const Config::Color& textCfg, const Config::ColorToggleRounding& backgroundCfg, const char* text, const ImVec2& pos, bool centered = true, bool adjustHeight = true) noexcept
 {
+    if (cullDistance && Helpers::units2meters(distance) > cullDistance)
+        return;
+
     const auto fontSize = std::clamp(15.0f * 10.0f / std::sqrt(distance), 10.0f, 15.0f);
 
-    ImGui::GetCurrentContext()->FontSize = fontSize;
-    const auto textSize = ImGui::CalcTextSize(text);
+    const auto textSize = ImGui::GetFont()->CalcTextSizeA(fontSize, FLT_MAX, -1.0f, text);
     const auto horizontalOffset = centered ? textSize.x / 2 : 0.0f;
     const auto verticalOffset = adjustHeight ? textSize.y : 0.0f;
 
@@ -294,15 +305,13 @@ static void renderPlayerBox(ImDrawList* drawList, const PlayerData& playerData, 
         renderSnaplines(drawList, bbox, config.snaplines, config.snaplineType);
 
         ImGui::PushFont(::config->fonts[config.font]);
-        const auto oldFontSize = ImGui::GetCurrentContext()->FontSize;
 
         if (config.name.enabled && !playerData.name.empty())
-            renderText(drawList, playerData.distanceToLocal, config.name, config.textBackground, playerData.name.c_str(), { (bbox.min.x + bbox.max.x) / 2, bbox.min.y - 5 });
+            renderText(drawList, playerData.distanceToLocal, config.textCullDistance, config.name, config.textBackground, playerData.name.c_str(), { (bbox.min.x + bbox.max.x) / 2, bbox.min.y - 5 });
 
         if (config.weapon.enabled && !playerData.activeWeapon.empty())
-            renderText(drawList, playerData.distanceToLocal, config.weapon, config.textBackground, playerData.activeWeapon.c_str(), { (bbox.min.x + bbox.max.x) / 2, bbox.max.y + 5 }, true, false);
+            renderText(drawList, playerData.distanceToLocal, config.textCullDistance, config.weapon, config.textBackground, playerData.activeWeapon.c_str(), { (bbox.min.x + bbox.max.x) / 2, bbox.max.y + 5 }, true, false);
 
-        ImGui::GetCurrentContext()->FontSize = oldFontSize;
         ImGui::PopFont();
     }
 }
@@ -314,19 +323,17 @@ static void renderWeaponBox(ImDrawList* drawList, const WeaponData& weaponData, 
         renderSnaplines(drawList, bbox, config.snaplines, config.snaplineType);
 
         ImGui::PushFont(::config->fonts[config.font]);
-        const auto oldFontSize = ImGui::GetCurrentContext()->FontSize;
 
         if (config.name.enabled && !weaponData.name.empty()) {
             if (char weaponName[100]; WideCharToMultiByte(CP_UTF8, 0, interfaces->localize->find(weaponData.name.c_str()), -1, weaponName, _countof(weaponName), nullptr, nullptr))
-                renderText(drawList, weaponData.distanceToLocal, config.name, config.textBackground, weaponName, { (bbox.min.x + bbox.max.x) / 2, bbox.min.y - 5 });
+                renderText(drawList, weaponData.distanceToLocal, config.textCullDistance, config.name, config.textBackground, weaponName, { (bbox.min.x + bbox.max.x) / 2, bbox.min.y - 5 });
         }
 
         if (config.ammo.enabled && weaponData.clip != -1) {
             const auto text{ std::to_string(weaponData.clip) + " / " + std::to_string(weaponData.reserveAmmo) };
-            renderText(drawList, weaponData.distanceToLocal, config.ammo, config.textBackground, text.c_str(), { (bbox.min.x + bbox.max.x) / 2, bbox.max.y + 5 }, true, false);
+            renderText(drawList, weaponData.distanceToLocal, config.textCullDistance, config.ammo, config.textBackground, text.c_str(), { (bbox.min.x + bbox.max.x) / 2, bbox.max.y + 5 }, true, false);
         }
 
-        ImGui::GetCurrentContext()->FontSize = oldFontSize;
         ImGui::PopFont();
     }
 }
@@ -338,12 +345,10 @@ static void renderEntityBox(ImDrawList* drawList, const EntityData& entityData, 
         renderSnaplines(drawList, bbox, config.snaplines, config.snaplineType);
 
         ImGui::PushFont(::config->fonts[config.font]);
-        const auto oldFontSize = ImGui::GetCurrentContext()->FontSize;
 
         if (config.name.enabled)
-            renderText(drawList, entityData.distanceToLocal, config.name, config.textBackground, name, { (bbox.min.x + bbox.max.x) / 2, bbox.min.y - 5 });
+            renderText(drawList, entityData.distanceToLocal, config.textCullDistance, config.name, config.textBackground, name, { (bbox.min.x + bbox.max.x) / 2, bbox.min.y - 5 });
 
-        ImGui::GetCurrentContext()->FontSize = oldFontSize;
         ImGui::PopFont();
     }
 }
